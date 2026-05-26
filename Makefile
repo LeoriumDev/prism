@@ -5,7 +5,7 @@ BUILD := build
 OBJ := $(SRC:src/%.c=$(BUILD)/%.o)
 BIN := $(BUILD)/prism
 
-.PHONY: all clean test
+.PHONY: all clean test sanitizer
 
 all: $(BIN)
 
@@ -23,3 +23,6 @@ clean:
 
 test:
 	@echo "test wired in §8"
+
+sanitizer: CFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
+sanitizer: clean all
