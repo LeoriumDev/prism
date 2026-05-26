@@ -1,0 +1,18 @@
+# Build artifacts
+build/
+prism
+out
+*.o
+*.s
+*.S
+*.dSYM/
+
+# Tooling caches
+.cache/
+compile_commands.json
+
+# Editor
+.vscode/
+
+# macOS
+.DS_Store
