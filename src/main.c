@@ -52,22 +52,22 @@ int main(int argc, char **argv) {
         return 1;
 
     TokenArray *toks = tokenize(source);
-    token_array_print(toks);
+    if (!toks) {
+        free(source);
+        return EXIT_FAILURE;
+    }
+
+    Node *ast = parse(toks);
+    if (!ast) {
+        free(source);
+        token_array_free(toks);
+        return EXIT_FAILURE;
+    }
+
+    print_ast(ast);
+    ast_free(ast);
     token_array_free(toks);
 
-    // ───── middle: the signatures of these three steps are YOUR design (§5–§7)
-    // ───── expected behavior:
-    //   1. lex(source)         → tokens (an array or a token stream)
-    //   2. parse(tokens)       → AST (on failure: print error with line number,
-    //   return non-zero)
-    //   3. codegen(ast, out)   → write RISC-V assembly to out_path
-    // any stage hitting invalid input: print "in_path:line: message", return
-    // non-zero, never crash.
-    //
-    // TODO(you): wire these three steps against the function signatures you
-    // design.
-    (void)out_path;
     free(source);
-    return 1;
-    // ────────────────────────────────────────────────────────────────────────────
+    return 0;
 }

@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *token_type_names[TOKEN_COUNT] = {"KW_INT",  "KW_VOID",   "KW_RETURN",  "IDENT",
-                                                    "INT_LIT", "LPAREN",    "RPAREN",     "LBRACE",
-                                                    "RBRACE",  "SEMICOLON", "END_OF_FILE"};
+static const char *token_type_names[TOKEN_COUNT] = {
+    "KW_INT", "KW_VOID", "KW_RETURN", "IDENT",     "INT_LIT",     "LPAREN",
+    "RPAREN", "LBRACE",  "RBRACE",    "SEMICOLON", "END_OF_FILE",
+};
 
 static const struct {
     const char *word;
@@ -193,9 +194,10 @@ void token_array_push(TokenArray *arr, Token tok) {
 
     if (arr->count == arr->capacity) {
         arr->capacity *= TOKEN_ARRAY_GROWTH;
-        arr->data = realloc(arr->data, arr->capacity * sizeof(Token));
-        if (!arr->data)
+        Token *new_data = realloc(arr->data, arr->capacity * sizeof(Token));
+        if (!new_data)
             return;
+        arr->data = new_data;
     }
 
     arr->data[arr->count++] = tok;

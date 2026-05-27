@@ -29,7 +29,7 @@ typedef enum {
     END_OF_FILE,
 
     // Token count
-    TOKEN_COUNT
+    TOKEN_COUNT,
 } TokenType;
 
 typedef union {
