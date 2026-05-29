@@ -1,22 +1,31 @@
 #!/bin/bash
-set -e
 
-VERBOSE=""
-while getopts "v" opt; do
-    case $opt in
-        v) VERBOSE="-v" ;;
-        *) echo "Usage: $0 [-v] [input.c]"; exit 1 ;;
-    esac
-done
-shift $((OPTIND - 1))
-
-INPUT="${1:-examples/ret2.c}"
 OUT_S="/tmp/prism_out.S"
 OUT_BIN="/tmp/prism_out"
 
-./build/prism $VERBOSE "$INPUT" -o "$OUT_S"
-riscv64-unknown-elf-gcc "$OUT_S" -o "$OUT_BIN"
+run_one() {
+    local input="$1"
 
-set +e
-spike pk "$OUT_BIN"
-echo "exit=$?"
+    if ! ./build/prism "$input" -o "$OUT_S"; then
+        printf "%-32s prism failed to compile\n" "$input:"
+        return
+    fi
+
+    if ! riscv64-unknown-elf-gcc "$OUT_S" -o "$OUT_BIN" 2>/dev/null; then
+        printf "%-32s assembler/linker failed\n" "$input:"
+        return
+    fi
+
+    spike pk "$OUT_BIN" >/dev/null 2>&1
+    printf "%-32s exit=%s\n" "$input:" "$?"
+}
+
+if [ $# -ge 1 ]; then
+    run_one "$1"
+else
+    for f in examples/*.c; do
+        run_one "$f"
+    done
+fi
+
+rm -f "$OUT_S" "$OUT_BIN"

@@ -110,8 +110,10 @@ static Node *parse_statement(Parser *parser) {
         return NULL;
 
     expect(parser, SEMICOLON);
-    if (parser->hadError)
+    if (parser->hadError) {
+        ast_free(expr_node);
         return NULL;
+    }
 
     Node *ret_node = malloc(sizeof(*ret_node));
     if (!ret_node)
@@ -132,8 +134,10 @@ static Node *parse_function(Parser *parser) {
     expect(parser, LBRACE);
     Node *statement_node = parse_statement(parser);
     expect(parser, RBRACE);
-    if (parser->hadError)
+    if (parser->hadError) {
+        ast_free(statement_node);
         return NULL;
+    }
 
     char *name = strdup(name_tok.value.str);
     if (!name)

@@ -21,8 +21,19 @@ $(BUILD):
 clean:
 	rm -rf $(BUILD) out.S out
 
-test:
-	@echo "test wired in §8"
+test: all
+	./tests/run_tests.sh
+
+run: all
+	./run.sh
 
 sanitizer: CFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
 sanitizer: clean all
+
+# macOS leak check
+leakcheck: all
+	@for f in examples/*.c; do \
+		echo "=== $$f ==="; \
+		leaks --atExit -- ./build/prism $$f -o /tmp/prism_leak.S >/tmp/leakout 2>&1; \
+		grep -E "total leaked|ROOT LEAK" /tmp/leakout || echo "  0 leaks"; \
+	done

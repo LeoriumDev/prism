@@ -46,12 +46,16 @@ void print_ast(const Node *node) {
 }
 
 void ast_free(Node *node) {
+    if (!node)
+        return;
+
     switch (node->kind) {
     case NODE_PROGRAM:
         ast_free(node->as.program.function);
         free(node);
         break;
     case NODE_FUNCTION:
+        free(node->as.function.name);
         ast_free(node->as.function.body);
         free(node);
         break;

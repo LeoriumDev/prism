@@ -178,6 +178,8 @@ TokenArray *tokenize(const char *src) {
                 int64_t value = 0;
                 size_t start_col = col;
                 while (is_digit(*p)) {
+                    if (value > (INT64_MAX - (*p - '0')) / 10)
+                        break;
                     value = value * 10 + (*p - '0');
                     p++;
                     col++;
@@ -268,7 +270,11 @@ void token_array_push(TokenArray *arr, Token tok) {
 void token_array_free(TokenArray *arr) {
     if (!arr)
         return;
-
+    for (size_t i = 0; i < arr->count; i++) {
+        if (arr->data[i].type == IDENT) {
+            free(arr->data[i].value.str);
+        }
+    }
     free(arr->data);
     free(arr);
 }
