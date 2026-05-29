@@ -32,6 +32,9 @@ typedef enum {
     MINUS,
     TILDE,
     BANG,
+    STAR,
+    SLASH,
+    PERCENT,
 
     // EOF
     END_OF_FILE,

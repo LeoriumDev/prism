@@ -5,8 +5,9 @@
 #include <string.h>
 
 static const char *token_type_names[TOKEN_COUNT] = {
-    "KW_INT", "KW_VOID",   "KW_RETURN", "IDENT", "INT_LIT", "LPAREN", "RPAREN",      "LBRACE",
-    "RBRACE", "SEMICOLON", "PLUS",      "MINUS", "TILDE",   "BANG",   "END_OF_FILE",
+    "TOKEN_INVALID", "KW_INT", "KW_VOID", "KW_RETURN", "IDENT",       "INT_LIT", "LPAREN",
+    "RPAREN",        "LBRACE", "RBRACE",  "SEMICOLON", "PLUS",        "MINUS",   "TILDE",
+    "BANG",          "STAR",   "SLASH",   "PERCENT",   "END_OF_FILE",
 };
 
 static const struct {
@@ -60,7 +61,7 @@ TokenArray *tokenize(const char *src) {
             break;
         }
 
-        // comment
+        // comment & division operator
         case '/': {
             if (*(p + 1) == '/') {
                 while (*p != '\n' && *p != '\0') {
@@ -83,9 +84,13 @@ TokenArray *tokenize(const char *src) {
                     col += 2;
                 }
             } else {
-                token_array_free(arr);
-                fprintf(stderr, "Not supported character: %c\n", *p);
-                return NULL;
+                Token tok = {
+                    .type = SLASH,
+                    .value = {0},
+                    .pos = {.col = col++, .line = line},
+                };
+                token_array_push(arr, tok);
+                p++;
             }
             break;
         }
@@ -176,6 +181,26 @@ TokenArray *tokenize(const char *src) {
         case '!': {
             Token tok = {
                 .type = BANG,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
+        case '*': {
+            Token tok = {
+                .type = STAR,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
+        case '%': {
+            Token tok = {
+                .type = PERCENT,
                 .value = {0},
                 .pos = {.col = col++, .line = line},
             };

@@ -20,6 +20,9 @@ typedef enum {
 typedef enum {
     BINARY_ADD,
     BINARY_SUBTRACT,
+    BINARY_MULTIPLY,
+    BINARY_DIVIDE,
+    BINARY_REMAINDER,
 } BinaryOp;
 
 typedef struct Node {

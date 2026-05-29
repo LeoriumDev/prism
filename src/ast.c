@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static const struct {
+    const char *word;
+    BinaryOp op;
+} binary_ops[] = {
+    {"ADD", BINARY_ADD},       {"SUBTRACT", BINARY_SUBTRACT},   {"MULTIPLY", BINARY_MULTIPLY},
+    {"DIVIDE", BINARY_DIVIDE}, {"REMAINDER", BINARY_REMAINDER},
+};
+
 static void print_node(const Node *node, char *prefix, bool is_last, char *label) {
     printf("%s%s%s", prefix, is_last ? "└── " : "├── ", label);
     char child_prefix[256];
@@ -32,7 +40,7 @@ static void print_node(const Node *node, char *prefix, bool is_last, char *label
         print_node(node->as.unary.operand, child_prefix, true, "");
         break;
     case NODE_BINARY:
-        name = (node->as.binary.op == BINARY_ADD) ? "ADD" : "SUBTRACT";
+        name = binary_ops[node->as.binary.op].word;
         printf("Binary op=%s\n", name);
         print_node(node->as.binary.left_operand, child_prefix, false, "left: ");
         print_node(node->as.binary.right_operand, child_prefix, true, "right: ");

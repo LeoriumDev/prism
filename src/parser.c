@@ -8,14 +8,16 @@
  * function   := "int" IDENT "(" "void" ")" "{" statement "}"
  * statement  := "return" expression ";"
  * expression := term { ("+" | "-") term }
- * term       := unary_op term | INT_LIT
+ * term       := factor { ("*" | "/" | "%") factor }
+ * factor     := unary_op factor | INT_LIT
  * unary_op   := "-" | "~" | "!"
  */
 
 static const char *token_display_names[TOKEN_COUNT] = {
-    "invalid token", "'int'", "'void'", "'return'",    "identifier", "integer literal",
-    "'('",           "')'",   "'{'",    "'}'",         "';'",        "'+'",
-    "'-'",           "'~'",   "'!'",    "end of file",
+    "invalid token", "'int'", "'void'", "'return'", "identifier", "integer literal",
+    "'('",           "')'",   "'{'",    "'}'",      "';'",        "'+'",
+    "'-'",           "'~'",   "'!'",    "'*'",      "'/'",        "'%'",
+    "end of file",
 };
 
 static Token advance(Parser *parser) {
@@ -49,8 +51,8 @@ static Token expect(Parser *parser, TokenType type) {
     }
 }
 
-// term := unary_op term | INT_LIT
-static Node *parse_term(Parser *parser) {
+// factor := unary_op factor | INT_LIT
+static Node *parse_factor(Parser *parser) {
     if (parser->hadError)
         return NULL;
 
@@ -70,18 +72,18 @@ static Node *parse_term(Parser *parser) {
         if (parser->hadError)
             return NULL;
 
-        Node *term_node = malloc(sizeof(*term_node));
-        if (!term_node)
+        Node *factor_node = malloc(sizeof(*factor_node));
+        if (!factor_node)
             return NULL;
 
-        term_node->kind = NODE_UNARY;
-        term_node->as.unary.op = op;
-        term_node->as.unary.operand = parse_term(parser);
-        if (!term_node->as.unary.operand) {
-            free(term_node);
+        factor_node->kind = NODE_UNARY;
+        factor_node->as.unary.op = op;
+        factor_node->as.unary.operand = parse_factor(parser);
+        if (!factor_node->as.unary.operand) {
+            free(factor_node);
             return NULL;
         }
-        return term_node;
+        return factor_node;
     } else if (tok.type == INT_LIT) {
         Token int_lit_tok = expect(parser, INT_LIT);
         if (parser->hadError)
@@ -101,6 +103,43 @@ static Node *parse_term(Parser *parser) {
                 token_display_names[tok.type]);
         return NULL;
     }
+}
+
+// term := factor { ("*" | "/" | "%") factor }
+static Node *parse_term(Parser *parser) {
+    if (parser->hadError)
+        return NULL;
+
+    Node *left = parse_factor(parser);
+    if (!left)
+        return NULL;
+
+    Token next = peek(parser);
+    while (next.type == STAR || next.type == SLASH || next.type == PERCENT) {
+        Token op_tok = advance(parser);
+        Node *right = parse_factor(parser);
+        if (!right) {
+            ast_free(left);
+            return NULL;
+        }
+
+        Node *binary_node = malloc(sizeof(*binary_node));
+        if (!binary_node) {
+            ast_free(left);
+            ast_free(right);
+            return NULL;
+        }
+
+        binary_node->kind = NODE_BINARY;
+        binary_node->as.binary.op =
+            (op_tok.type == STAR) ? BINARY_MULTIPLY
+                                  : ((op_tok.type == SLASH) ? BINARY_DIVIDE : BINARY_REMAINDER);
+        binary_node->as.binary.left_operand = left;
+        binary_node->as.binary.right_operand = right;
+        left = binary_node;
+        next = peek(parser);
+    }
+    return left;
 }
 
 // expression := term { ("+" | "-") term }

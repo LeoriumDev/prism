@@ -64,6 +64,15 @@ static void emit(Node *node, FILE *f) {
         case BINARY_SUBTRACT:
             fprintf(f, "    sub a0, t0, a0\n");
             break;
+        case BINARY_MULTIPLY:
+            fprintf(f, "    mul a0, t0, a0\n");
+            break;
+        case BINARY_DIVIDE:
+            fprintf(f, "    div a0, t0, a0\n");
+            break;
+        case BINARY_REMAINDER:
+            fprintf(f, "    rem a0, t0, a0\n");
+            break;
         }
         break;
     default:
