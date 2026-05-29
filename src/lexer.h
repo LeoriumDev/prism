@@ -7,8 +7,10 @@
 #define TOKEN_ARRAY_GROWTH 2
 
 typedef enum {
+    TOKEN_INVALID = 0,
+
     // Keywords
-    KW_INT = 0,
+    KW_INT,
     KW_VOID,
     KW_RETURN,
 
@@ -26,6 +28,7 @@ typedef enum {
     SEMICOLON,
 
     // Operators
+    PLUS,
     MINUS,
     TILDE,
     BANG,

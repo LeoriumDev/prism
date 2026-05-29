@@ -8,6 +8,7 @@ typedef enum {
     NODE_RETURN,
     NODE_INT_LIT,
     NODE_UNARY,
+    NODE_BINARY,
 } NodeKind;
 
 typedef enum {
@@ -15,6 +16,11 @@ typedef enum {
     UNARY_BITWISE_NOT, // ~
     UNARY_LOGICAL_NOT, // !
 } UnaryOp;
+
+typedef enum {
+    BINARY_ADD,
+    BINARY_SUBTRACT,
+} BinaryOp;
 
 typedef struct Node {
     NodeKind kind;
@@ -36,6 +42,11 @@ typedef struct Node {
             UnaryOp op;
             struct Node *operand;
         } unary;
+        struct {
+            BinaryOp op;
+            struct Node *left_operand;
+            struct Node *right_operand;
+        } binary;
     } as;
 } Node;
 

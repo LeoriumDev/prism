@@ -5,8 +5,8 @@
 #include <string.h>
 
 static const char *token_type_names[TOKEN_COUNT] = {
-    "KW_INT", "KW_VOID", "KW_RETURN", "IDENT", "INT_LIT", "LPAREN", "RPAREN",
-    "LBRACE", "RBRACE",  "SEMICOLON", "MINUS", "TILDE",   "BANG",   "END_OF_FILE",
+    "KW_INT", "KW_VOID",   "KW_RETURN", "IDENT", "INT_LIT", "LPAREN", "RPAREN",      "LBRACE",
+    "RBRACE", "SEMICOLON", "PLUS",      "MINUS", "TILDE",   "BANG",   "END_OF_FILE",
 };
 
 static const struct {
@@ -143,6 +143,16 @@ TokenArray *tokenize(const char *src) {
         }
 
         // operators
+        case '+': {
+            Token tok = {
+                .type = PLUS,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
         case '-': {
             Token tok = {
                 .type = MINUS,

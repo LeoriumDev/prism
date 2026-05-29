@@ -50,6 +50,22 @@ static void emit(Node *node, FILE *f) {
             break;
         }
         break;
+    case NODE_BINARY:
+        emit(node->as.binary.left_operand, f);
+        fprintf(f, "    addi sp, sp, -16\n");
+        fprintf(f, "    sd a0, 0(sp)\n");
+        emit(node->as.binary.right_operand, f);
+        fprintf(f, "    ld t0, 0(sp)\n");
+        fprintf(f, "    addi sp, sp, 16\n");
+        switch (node->as.binary.op) {
+        case BINARY_ADD:
+            fprintf(f, "    add a0, t0, a0\n");
+            break;
+        case BINARY_SUBTRACT:
+            fprintf(f, "    sub a0, t0, a0\n");
+            break;
+        }
+        break;
     default:
         fprintf(stderr, "codegen: unhandled node kind %d\n", node->kind);
         assert(0);

@@ -7,49 +7,53 @@
  * program    := function
  * function   := "int" IDENT "(" "void" ")" "{" statement "}"
  * statement  := "return" expression ";"
- * expression := unary_op expression
- *               | INT_LIT
+ * expression := term { ("+" | "-") term }
+ * term       := unary_op term | INT_LIT
  * unary_op   := "-" | "~" | "!"
  */
 
 static const char *token_display_names[TOKEN_COUNT] = {
-    "'int'", "'void'", "'return'", "identifier", "integer literal", "'('", "')'", "'{'", "'}'",
-    "';'",   "'-'",    "'~'",      "'!'",        "end of file",
+    "invalid token", "'int'", "'void'", "'return'",    "identifier", "integer literal",
+    "'('",           "')'",   "'{'",    "'}'",         "';'",        "'+'",
+    "'-'",           "'~'",   "'!'",    "end of file",
 };
 
-static Token peek(Parser *parser) {
-    if (parser->hadError)
-        return (Token){0};
-    if (parser->pos >= parser->tokens->count) {
+static Token advance(Parser *parser) {
+    if (parser->hadError || parser->pos >= parser->tokens->count) {
         parser->hadError = true;
-        return (Token){0};
+        return (Token){.type = TOKEN_INVALID};
     }
+    return parser->tokens->data[parser->pos++];
+}
+
+static Token peek(Parser *parser) {
+    if (parser->hadError || parser->pos >= parser->tokens->count)
+        return (Token){.type = TOKEN_INVALID};
     return parser->tokens->data[parser->pos];
 }
 
 static Token expect(Parser *parser, TokenType type) {
-    if (parser->hadError)
-        return (Token){0};
-    if (parser->pos >= parser->tokens->count) {
+    if (parser->hadError || type == TOKEN_INVALID || parser->pos >= parser->tokens->count) {
         parser->hadError = true;
-        return (Token){0};
+        return (Token){.type = TOKEN_INVALID};
     }
-    if (parser->tokens->data[parser->pos].type == type) {
-        return parser->tokens->data[parser->pos++];
+    Token tok = parser->tokens->data[parser->pos];
+    if (tok.type == type) {
+        parser->pos++;
+        return tok;
     } else {
-        fprintf(stderr, "[%zu:%zu] error: expected %s, got %s\n",
-                parser->tokens->data[parser->pos].pos.line,
-                parser->tokens->data[parser->pos].pos.col, token_display_names[type],
-                token_display_names[parser->tokens->data[parser->pos].type]);
+        fprintf(stderr, "[%zu:%zu] error: expected %s, got %s\n", tok.pos.line, tok.pos.col,
+                token_display_names[type], token_display_names[tok.type]);
         parser->hadError = true;
-        return (Token){0};
+        return (Token){.type = TOKEN_INVALID};
     }
 }
 
-// expression := unary_op expression
-//               | INT_LIT
-// unary_op   := "-" | "~" | "!"
-static Node *parse_expression(Parser *parser) {
+// term := unary_op term | INT_LIT
+static Node *parse_term(Parser *parser) {
+    if (parser->hadError)
+        return NULL;
+
     Token tok = peek(parser);
     if (tok.type == MINUS || tok.type == TILDE || tok.type == BANG) {
         UnaryOp op;
@@ -66,18 +70,18 @@ static Node *parse_expression(Parser *parser) {
         if (parser->hadError)
             return NULL;
 
-        Node *expr_node = malloc(sizeof(*expr_node));
-        if (!expr_node)
+        Node *term_node = malloc(sizeof(*term_node));
+        if (!term_node)
             return NULL;
 
-        expr_node->kind = NODE_UNARY;
-        expr_node->as.unary.op = op;
-        expr_node->as.unary.operand = parse_expression(parser);
-        if (!expr_node->as.unary.operand) {
-            free(expr_node);
+        term_node->kind = NODE_UNARY;
+        term_node->as.unary.op = op;
+        term_node->as.unary.operand = parse_term(parser);
+        if (!term_node->as.unary.operand) {
+            free(term_node);
             return NULL;
         }
-        return expr_node;
+        return term_node;
     } else if (tok.type == INT_LIT) {
         Token int_lit_tok = expect(parser, INT_LIT);
         if (parser->hadError)
@@ -97,6 +101,41 @@ static Node *parse_expression(Parser *parser) {
                 token_display_names[tok.type]);
         return NULL;
     }
+}
+
+// expression := term { ("+" | "-") term }
+static Node *parse_expression(Parser *parser) {
+    if (parser->hadError)
+        return NULL;
+
+    Node *left = parse_term(parser);
+    if (!left)
+        return NULL;
+
+    Token next = peek(parser);
+    while (next.type == PLUS || next.type == MINUS) {
+        Token op_tok = advance(parser);
+        Node *right = parse_term(parser);
+        if (!right) {
+            ast_free(left);
+            return NULL;
+        }
+
+        Node *binary_node = malloc(sizeof(*binary_node));
+        if (!binary_node) {
+            ast_free(left);
+            ast_free(right);
+            return NULL;
+        }
+
+        binary_node->kind = NODE_BINARY;
+        binary_node->as.binary.op = (op_tok.type == PLUS) ? BINARY_ADD : BINARY_SUBTRACT;
+        binary_node->as.binary.left_operand = left;
+        binary_node->as.binary.right_operand = right;
+        left = binary_node;
+        next = peek(parser);
+    }
+    return left;
 }
 
 // statement  := "return" expression ";"

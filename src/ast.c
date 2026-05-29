@@ -2,47 +2,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void print_node(const Node *node, int depth) {
-    for (int i = 1; i < depth; i++)
-        printf("   ");
-    if (depth > 0)
-        printf("└─ ");
+static void print_node(const Node *node, char *prefix, bool is_last, char *label) {
+    printf("%s%s%s", prefix, is_last ? "└── " : "├── ", label);
+    char child_prefix[256];
+    const char *name;
+    snprintf(child_prefix, sizeof(child_prefix), "%s%s", prefix, is_last ? "    " : "│   ");
 
     switch (node->kind) {
     case NODE_PROGRAM:
         printf("Program\n");
-        print_node(node->as.program.function, depth + 1);
+        print_node(node->as.program.function, child_prefix, true, "");
         break;
     case NODE_FUNCTION:
         printf("Function name=\"%s\"\n", node->as.function.name);
-        print_node(node->as.function.body, depth + 1);
+        print_node(node->as.function.body, child_prefix, true, "");
         break;
     case NODE_RETURN:
         printf("Return\n");
-        print_node(node->as.ret.value, depth + 1);
+        print_node(node->as.ret.value, child_prefix, true, "");
         break;
     case NODE_INT_LIT:
         printf("IntLit value=%lld\n", (long long)node->as.int_lit.value);
         break;
     case NODE_UNARY:
-        switch (node->as.unary.op) {
-        case UNARY_NEGATE:
-            printf("Unary op=NEGATE\n");
-            break;
-        case UNARY_BITWISE_NOT:
-            printf("Unary op=BITWISE_NOT\n");
-            break;
-        case UNARY_LOGICAL_NOT:
-            printf("Unary op=LOGICAL_NOT\n");
-            break;
-        };
-        print_node(node->as.unary.operand, depth + 1);
+        name = (node->as.unary.op == UNARY_NEGATE)        ? "NEGATE"
+               : (node->as.unary.op == UNARY_BITWISE_NOT) ? "BITWISE_NOT"
+                                                          : "LOGICAL_NOT";
+        printf("Unary op=%s\n", name);
+        print_node(node->as.unary.operand, child_prefix, true, "");
+        break;
+    case NODE_BINARY:
+        name = (node->as.binary.op == BINARY_ADD) ? "ADD" : "SUBTRACT";
+        printf("Binary op=%s\n", name);
+        print_node(node->as.binary.left_operand, child_prefix, false, "left: ");
+        print_node(node->as.binary.right_operand, child_prefix, true, "right: ");
         break;
     }
 }
 
 void print_ast(const Node *node) {
-    print_node(node, 0);
+    print_node(node, "", true, "");
 }
 
 void ast_free(Node *node) {
@@ -68,6 +67,11 @@ void ast_free(Node *node) {
         break;
     case NODE_UNARY:
         ast_free(node->as.unary.operand);
+        free(node);
+        break;
+    case NODE_BINARY:
+        ast_free(node->as.binary.left_operand);
+        ast_free(node->as.binary.right_operand);
         free(node);
         break;
     }
