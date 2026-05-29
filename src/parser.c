@@ -4,16 +4,32 @@
 #include <string.h>
 
 /* grammar:
- * program   := function
- * function  := "int" IDENT "(" "void" ")" "{" statement "}"
- * statement := "return" INT_LIT ";"
+ * program    := function
+ * function   := "int" IDENT "(" "void" ")" "{" statement "}"
+ * statement  := "return" expression ";"
+ * expression := unary_op expression
+ *               | INT_LIT
+ * unary_op   := "-" | "~" | "!"
  */
 
 static const char *token_display_names[TOKEN_COUNT] = {
-    "int", "void", "return", "identifier", "integer literal", "(", ")", "{", "}", ";", "EOF",
+    "'int'", "'void'", "'return'", "identifier", "integer literal", "'('", "')'", "'{'", "'}'",
+    "';'",   "'-'",    "'~'",      "'!'",        "end of file",
 };
 
+static Token peek(Parser *parser) {
+    if (parser->hadError)
+        return (Token){0};
+    if (parser->pos >= parser->tokens->count) {
+        parser->hadError = true;
+        return (Token){0};
+    }
+    return parser->tokens->data[parser->pos];
+}
+
 static Token expect(Parser *parser, TokenType type) {
+    if (parser->hadError)
+        return (Token){0};
     if (parser->pos >= parser->tokens->count) {
         parser->hadError = true;
         return (Token){0};
@@ -21,7 +37,7 @@ static Token expect(Parser *parser, TokenType type) {
     if (parser->tokens->data[parser->pos].type == type) {
         return parser->tokens->data[parser->pos++];
     } else {
-        fprintf(stderr, "[%zu:%zu] error: expected '%s', got '%s'\n",
+        fprintf(stderr, "[%zu:%zu] error: expected %s, got %s\n",
                 parser->tokens->data[parser->pos].pos.line,
                 parser->tokens->data[parser->pos].pos.col, token_display_names[type],
                 token_display_names[parser->tokens->data[parser->pos].type]);
@@ -30,24 +46,79 @@ static Token expect(Parser *parser, TokenType type) {
     }
 }
 
-// statement := "return" INT_LIT ";"
+// expression := unary_op expression
+//               | INT_LIT
+// unary_op   := "-" | "~" | "!"
+static Node *parse_expression(Parser *parser) {
+    Token tok = peek(parser);
+    if (tok.type == MINUS || tok.type == TILDE || tok.type == BANG) {
+        UnaryOp op;
+        if (tok.type == MINUS) {
+            expect(parser, MINUS);
+            op = UNARY_NEGATE;
+        } else if (tok.type == TILDE) {
+            expect(parser, TILDE);
+            op = UNARY_BITWISE_NOT;
+        } else {
+            expect(parser, BANG);
+            op = UNARY_LOGICAL_NOT;
+        }
+        if (parser->hadError)
+            return NULL;
+
+        Node *expr_node = malloc(sizeof(*expr_node));
+        if (!expr_node)
+            return NULL;
+
+        expr_node->kind = NODE_UNARY;
+        expr_node->as.unary.op = op;
+        expr_node->as.unary.operand = parse_expression(parser);
+        if (!expr_node->as.unary.operand) {
+            free(expr_node);
+            return NULL;
+        }
+        return expr_node;
+    } else if (tok.type == INT_LIT) {
+        Token int_lit_tok = expect(parser, INT_LIT);
+        if (parser->hadError)
+            return NULL;
+
+        int64_t value = int_lit_tok.value.int_val;
+        Node *int_lit_node = malloc(sizeof(*int_lit_node));
+        if (!int_lit_node)
+            return NULL;
+
+        int_lit_node->kind = NODE_INT_LIT;
+        int_lit_node->as.int_lit.value = value;
+        return int_lit_node;
+    } else {
+        parser->hadError = true;
+        fprintf(stderr, "[%zu:%zu] error: expected expression, got %s\n", tok.pos.line, tok.pos.col,
+                token_display_names[tok.type]);
+        return NULL;
+    }
+}
+
+// statement  := "return" expression ";"
 static Node *parse_statement(Parser *parser) {
     expect(parser, KW_RETURN);
-    Token int_lit_tok = expect(parser, INT_LIT);
+    if (parser->hadError)
+        return NULL;
+
+    Node *expr_node = parse_expression(parser);
+    if (!expr_node)
+        return NULL;
+
     expect(parser, SEMICOLON);
     if (parser->hadError)
         return NULL;
 
-    int64_t value = int_lit_tok.value.int_val;
     Node *ret_node = malloc(sizeof(*ret_node));
-    Node *int_lit_node = malloc(sizeof(*int_lit_node));
-    if (!ret_node || !int_lit_node)
+    if (!ret_node)
         return NULL;
 
     ret_node->kind = NODE_RETURN;
-    ret_node->as.ret.value = int_lit_node;
-    int_lit_node->kind = NODE_INT_LIT;
-    int_lit_node->as.int_lit.value = value;
+    ret_node->as.ret.value = expr_node;
     return ret_node;
 }
 

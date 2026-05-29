@@ -25,6 +25,11 @@ typedef enum {
     RBRACE,
     SEMICOLON,
 
+    // Operators
+    MINUS,
+    TILDE,
+    BANG,
+
     // EOF
     END_OF_FILE,
 

@@ -36,6 +36,20 @@ static void emit(Node *node, FILE *f) {
     case NODE_INT_LIT:
         fprintf(f, "    li a0, %lld\n", (long long)node->as.int_lit.value);
         break;
+    case NODE_UNARY:
+        emit(node->as.unary.operand, f);
+        switch (node->as.unary.op) {
+        case UNARY_NEGATE:
+            fprintf(f, "    neg a0, a0\n");
+            break;
+        case UNARY_BITWISE_NOT:
+            fprintf(f, "    not a0, a0\n");
+            break;
+        case UNARY_LOGICAL_NOT:
+            fprintf(f, "    seqz a0, a0\n");
+            break;
+        }
+        break;
     default:
         fprintf(stderr, "codegen: unhandled node kind %d\n", node->kind);
         assert(0);

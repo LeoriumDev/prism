@@ -5,8 +5,8 @@
 #include <string.h>
 
 static const char *token_type_names[TOKEN_COUNT] = {
-    "KW_INT", "KW_VOID", "KW_RETURN", "IDENT",     "INT_LIT",     "LPAREN",
-    "RPAREN", "LBRACE",  "RBRACE",    "SEMICOLON", "END_OF_FILE",
+    "KW_INT", "KW_VOID", "KW_RETURN", "IDENT", "INT_LIT", "LPAREN", "RPAREN",
+    "LBRACE", "RBRACE",  "SEMICOLON", "MINUS", "TILDE",   "BANG",   "END_OF_FILE",
 };
 
 static const struct {
@@ -60,6 +60,36 @@ TokenArray *tokenize(const char *src) {
             break;
         }
 
+        // comment
+        case '/': {
+            if (*(p + 1) == '/') {
+                while (*p != '\n' && *p != '\0') {
+                    p++;
+                    col++;
+                }
+            } else if (*(p + 1) == '*') {
+                while (!(*p == '*' && *(p + 1) == '/') && *p != '\0') {
+                    if (*p == '\n') {
+                        line++;
+                        col = 1;
+                        p++;
+                        continue;
+                    }
+                    p++;
+                    col++;
+                }
+                if (*p != '\0') {
+                    p += 2;
+                    col += 2;
+                }
+            } else {
+                token_array_free(arr);
+                fprintf(stderr, "Not supported character: %c\n", *p);
+                return NULL;
+            }
+            break;
+        }
+
         // punctuation
         case '(': {
             Token tok = {
@@ -104,6 +134,38 @@ TokenArray *tokenize(const char *src) {
         case ';': {
             Token tok = {
                 .type = SEMICOLON,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
+
+        // operators
+        case '-': {
+            Token tok = {
+                .type = MINUS,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
+        case '~': {
+            Token tok = {
+                .type = TILDE,
+                .value = {0},
+                .pos = {.col = col++, .line = line},
+            };
+            token_array_push(arr, tok);
+            p++;
+            break;
+        }
+        case '!': {
+            Token tok = {
+                .type = BANG,
                 .value = {0},
                 .pos = {.col = col++, .line = line},
             };

@@ -7,7 +7,14 @@ typedef enum {
     NODE_FUNCTION,
     NODE_RETURN,
     NODE_INT_LIT,
+    NODE_UNARY,
 } NodeKind;
+
+typedef enum {
+    UNARY_NEGATE,      // -
+    UNARY_BITWISE_NOT, // ~
+    UNARY_LOGICAL_NOT, // !
+} UnaryOp;
 
 typedef struct Node {
     NodeKind kind;
@@ -25,6 +32,10 @@ typedef struct Node {
         struct {
             int64_t value;
         } int_lit;
+        struct {
+            UnaryOp op;
+            struct Node *operand;
+        } unary;
     } as;
 } Node;
 
